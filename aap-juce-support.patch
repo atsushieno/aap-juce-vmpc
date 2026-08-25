@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b750487..258ac5a 100644
+index b750487..06b1bce 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -44,7 +44,7 @@ if(NOT DEFINED JUCE_COPY_PLUGIN_AFTER_BUILD)
@@ -32,10 +32,12 @@ index b750487..258ac5a 100644
  fetchcontent_declare_cached_git(melatonin_blur "melatonin_blur" "${CMAKE_SOURCE_DIR}/deps/melatonin_blur" "${VMPC_MELATONIN_BLUR_REPO}" "${VMPC_MELATONIN_BLUR_REF}")
  
  fetchcontent_declare_cached_git(juce-raw-keyboard-input-module "juce-raw-keyboard-input-module" "${CMAKE_SOURCE_DIR}/editables/juce-raw-keyboard-input-module" "${VMPC_RAW_KBD_REPO}" "${VMPC_RAW_KBD_REF}")
-@@ -105,6 +104,64 @@ set(BUILD_EXAMPLES OFF)
+@@ -105,6 +104,66 @@ set(BUILD_EXAMPLES OFF)
  set(BUILD_TESTS OFF)
  set(INSTALL_PROJECT OFF)
  
++FetchContent_Populate(mpc)
++
 +if (ANDROID)
 +  # The fetched mpc project has a desktop-only udisks2/X11 branch guarded only
 +  # by UNIX and NOT APPLE. Patch that generated source for Android before it is
@@ -97,10 +99,12 @@ index b750487..258ac5a 100644
  if(APPLE)
  if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
  fetchcontent_declare_cached_git(miniz "miniz" "${CMAKE_SOURCE_DIR}/deps/miniz" "${VMPC_MINIZ_REPO}" "${VMPC_MINIZ_REF}"
-@@ -124,9 +181,23 @@ endif()
+@@ -123,10 +182,24 @@ if(TARGET nlohmann_json::nlohmann_json AND NOT TARGET nlohmann_json)
+ endif()
  
  message(STATUS "Resolving mpc...")
- FetchContent_MakeAvailable(mpc)
+-FetchContent_MakeAvailable(mpc)
++add_subdirectory("${mpc_SOURCE_DIR}" "${mpc_BINARY_DIR}")
 +if (ANDROID AND TARGET mpc)
 +  target_include_directories(mpc PUBLIC "${CMAKE_BINARY_DIR}/_cmrc/include")
 +endif()
@@ -122,7 +126,7 @@ index b750487..258ac5a 100644
  
  message(STATUS "Resolving juce-raw-keyboard-input-module...")
  FetchContent_MakeAvailable(juce-raw-keyboard-input-module)
-@@ -162,6 +233,12 @@ else()
+@@ -162,6 +235,12 @@ else()
          LV2URI "http://www.izmar.nl/VMPC2000XL")
  endif()
  
@@ -135,7 +139,7 @@ index b750487..258ac5a 100644
  # Single call to juce_add_plugin with conditional settings
  juce_add_plugin(vmpc2000xl
      BUNDLE_ID nl.izmar.vmpc2000xl
-@@ -254,7 +331,7 @@ target_compile_definitions(vmpc2000xl
+@@ -254,7 +333,7 @@ target_compile_definitions(vmpc2000xl
      JUCE_DISPLAY_SPLASH_SCREEN=0
      JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1)
  
@@ -144,7 +148,7 @@ index b750487..258ac5a 100644
      include(FindPkgConfig)
      pkg_search_module(udisks2 REQUIRED udisks2)
      target_link_libraries(vmpc2000xl PRIVATE ${udisks2_LIBRARIES} X11)
-@@ -395,3 +472,41 @@ set(CPACK_SOURCE_IGNORE_FILES
+@@ -395,3 +474,41 @@ set(CPACK_SOURCE_IGNORE_FILES
      /\\\\.DS_Store
  )
  include(CPack)
