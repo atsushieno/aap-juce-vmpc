@@ -1,0 +1,5 @@
+<devices>
+    <device name="VMPC2000XL" manufacturer="androidaudioplugin.org" product="VMPC2000XL">
+        <input-port name="input" />
+    </device>
+</devices>

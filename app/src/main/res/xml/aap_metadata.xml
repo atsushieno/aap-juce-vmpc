@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugins xmlns="urn:org.androidaudioplugin.core">
+  <plugin name="VMPC2000XL AAP" category="Instrument"
+      developer="Izmar / AAP Porting Project" unique-id="juceaap:766d7063" library="libvmpc2000xl_Standalone.so"
+      entrypoint="GetJuceAAPFactoryStandalone"
+      gui:ui-view-factory="org.androidaudioplugin.juce.JuceAudioPluginViewFactory"
+      xmlns:gui="urn://androidaudioplugin.org/extensions/gui">
+    <extensions bom="0.12.0" />
+    <ports>
+      <port direction="output" content="audio" name="Audio outputs"/>
+      <port direction="input" content="audio" name="Audio inputs"/>
+      <port direction="input" content="midi2" name="MIDI input"/>
+      <port direction="output" content="midi2" name="MIDI output"/>
+    </ports>
+  </plugin>
+</plugins>

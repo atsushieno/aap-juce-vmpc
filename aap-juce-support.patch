@@ -1,0 +1,246 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b750487..717f2cd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -44,7 +44,7 @@ if(NOT DEFINED JUCE_COPY_PLUGIN_AFTER_BUILD)
+ endif()
+ set_property(GLOBAL PROPERTY USE_FOLDERS YES)
+ 
+-if (APPLE)
++if (APPLE AND NOT ANDROID)
+     project(vmpc2000xl VERSION ${VMPC_VERSION} LANGUAGES C CXX OBJC OBJCXX)
+ else()
+     project(vmpc2000xl VERSION ${VMPC_VERSION} LANGUAGES C CXX)
+@@ -70,6 +70,9 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/version.txt "${VMPC_VERSION}")
+ set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+ 
+ option(VMPC_BUILD_TESTS "Build vmpc-juce test targets" ON)
++if (ANDROID)
++  set(VMPC_BUILD_TESTS OFF CACHE BOOL "Build vmpc-juce test targets" FORCE)
++endif()
+ 
+ set(VMPC_JUCE_REPO "https://github.com/izzyreal/JUCE.git")
+ set(VMPC_JUCE_REF "7.0.9-vmpc")
+@@ -105,6 +108,64 @@ set(BUILD_EXAMPLES OFF)
+ set(BUILD_TESTS OFF)
+ set(INSTALL_PROJECT OFF)
+ 
++if (ANDROID)
++  # The fetched mpc project has a desktop-only udisks2/X11 branch guarded only
++  # by UNIX and NOT APPLE. Patch that generated source for Android before it is
++  # configured as a dependency.
++  file(READ "${CMAKE_SOURCE_DIR}/editables/mpc/CMakeLists.txt" _mpc_cmake)
++  string(REPLACE "if (UNIX AND NOT APPLE)"
++                 "if (UNIX AND NOT APPLE AND NOT ANDROID)"
++                 _mpc_cmake "${_mpc_cmake}")
++  string(FIND "${_mpc_cmake}" "if (NOT ANDROID)\nif (APPLE)\n    add_executable(mpc-tests" _mpc_test_guard)
++  if (_mpc_test_guard EQUAL -1)
++    string(FIND "${_mpc_cmake}" "if (APPLE)\n    add_executable(mpc-tests" _mpc_test_start)
++    string(FIND "${_mpc_cmake}" "\n_bundle_resources()" _mpc_test_end)
++    if (_mpc_test_start GREATER -1 AND _mpc_test_end GREATER _mpc_test_start)
++      string(SUBSTRING "${_mpc_cmake}" ${_mpc_test_start} ${_mpc_test_end} _mpc_test_block)
++      string(SUBSTRING "${_mpc_cmake}" 0 ${_mpc_test_start} _mpc_prefix)
++      string(SUBSTRING "${_mpc_cmake}" ${_mpc_test_end} -1 _mpc_suffix)
++      set(_mpc_cmake "${_mpc_prefix}if (NOT ANDROID)\n${_mpc_test_block}\nendif()${_mpc_suffix}")
++    endif()
++  endif()
++  set(_android_akaifat_source "${CMAKE_BINARY_DIR}/aap-android-akaifat")
++  if (EXISTS "${CMAKE_SOURCE_DIR}/editables/akaifat/CMakeLists.txt")
++    file(COPY "${CMAKE_SOURCE_DIR}/editables/akaifat/" DESTINATION "${_android_akaifat_source}")
++    file(READ "${_android_akaifat_source}/CMakeLists.txt" _akaifat_cmake)
++    string(FIND "${_akaifat_cmake}" "if (NOT ANDROID)\nadd_executable(akaifat-tests" _akaifat_test_guard)
++    if (_akaifat_test_guard EQUAL -1)
++      string(REPLACE "add_executable(akaifat-tests"
++                     "if (NOT ANDROID)\nadd_executable(akaifat-tests"
++                     _akaifat_cmake "${_akaifat_cmake}")
++      string(APPEND _akaifat_cmake "\nendif()\n")
++    endif()
++    file(WRITE "${_android_akaifat_source}/CMakeLists.txt" "${_akaifat_cmake}")
++    set(FETCHCONTENT_SOURCE_DIR_AKAIFAT "${_android_akaifat_source}" CACHE PATH "Android akaifat source" FORCE)
++  endif()
++
++  file(READ "${CMAKE_SOURCE_DIR}/editables/mpc/cmake/MpcResourceBundling.cmake" _mpc_resources_cmake)
++  string(FIND "${_mpc_resources_cmake}" "if (NOT ANDROID)\n  target_link_libraries(mpc-tests mpctest::rc)" _mpc_resource_guard)
++  if (_mpc_resource_guard EQUAL -1)
++    string(REPLACE "target_link_libraries(mpc-tests mpctest::rc)"
++                   "if (NOT ANDROID)\n  target_link_libraries(mpc-tests mpctest::rc)\n  endif()"
++        _mpc_resources_cmake "${_mpc_resources_cmake}")
++  endif()
++  file(WRITE "${CMAKE_SOURCE_DIR}/editables/mpc/cmake/MpcResourceBundling.cmake" "${_mpc_resources_cmake}")
++  file(WRITE "${CMAKE_SOURCE_DIR}/editables/mpc/CMakeLists.txt" "${_mpc_cmake}")
++
++  foreach(_mpc_android_file IN ITEMS
++      "${CMAKE_SOURCE_DIR}/editables/mpc/src/main/input/keyboard/KeyboardLayout.hpp"
++      "${CMAKE_SOURCE_DIR}/editables/mpc/src/main/input/keyboard/KeyCodeHelper.cpp")
++    file(READ "${_mpc_android_file}" _mpc_android_source)
++    string(REPLACE "defined(__linux__)" "defined(__linux__) && !defined(__ANDROID__)"
++                   _mpc_android_source "${_mpc_android_source}")
++    string(REPLACE "defined __linux__" "defined __linux__ && !defined __ANDROID__"
++                   _mpc_android_source "${_mpc_android_source}")
++    file(WRITE "${_mpc_android_file}" "${_mpc_android_source}")
++  endforeach()
++
++  file(WRITE "${CMAKE_SOURCE_DIR}/editables/mpc/CMakeLists.txt" "${_mpc_cmake}")
++endif()
++
+ if(APPLE)
+ if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+ fetchcontent_declare_cached_git(miniz "miniz" "${CMAKE_SOURCE_DIR}/deps/miniz" "${VMPC_MINIZ_REPO}" "${VMPC_MINIZ_REF}"
+@@ -124,6 +185,9 @@ endif()
+ 
+ message(STATUS "Resolving mpc...")
+ FetchContent_MakeAvailable(mpc)
++if (ANDROID AND TARGET mpc)
++  target_include_directories(mpc PUBLIC "${CMAKE_BINARY_DIR}/_cmrc/include")
++endif()
+ 
+ message(STATUS "Resolving JUCE...")
+ FetchContent_MakeAvailable(JUCE)
+@@ -162,6 +226,12 @@ else()
+         LV2URI "http://www.izmar.nl/VMPC2000XL")
+ endif()
+ 
++if (ANDROID)
++    # AAP hosts the JUCE Standalone target as an Android shared library.
++    set(NON_IOS_SPECIFIC_SETTINGS
++        FORMATS Standalone)
++endif()
++
+ # Single call to juce_add_plugin with conditional settings
+ juce_add_plugin(vmpc2000xl
+     BUNDLE_ID nl.izmar.vmpc2000xl
+@@ -254,7 +324,7 @@ target_compile_definitions(vmpc2000xl
+     JUCE_DISPLAY_SPLASH_SCREEN=0
+     JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1)
+ 
+-if (UNIX AND NOT APPLE)
++if (UNIX AND NOT APPLE AND NOT ANDROID)
+     include(FindPkgConfig)
+     pkg_search_module(udisks2 REQUIRED udisks2)
+     target_link_libraries(vmpc2000xl PRIVATE ${udisks2_LIBRARIES} X11)
+@@ -395,3 +465,41 @@ set(CPACK_SOURCE_IGNORE_FILES
+     /\\\\.DS_Store
+ )
+ include(CPack)
++
++# AAP specifics.
++include_directories("${AAP_DIR}/include")
++add_definitions(-DJUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity")
++
++target_compile_definitions(vmpc2000xl PUBLIC
++    JUCEAAP_HAVE_AUDIO_PLAYHEAD_NEW_POSITION_INFO=1
++    JUCE_PUSH_NOTIFICATIONS=1)
++
++message(STATUS "AAP_DIR: ${AAP_DIR}")
++message(STATUS "AAP_JUCE_DIR: ${AAP_JUCE_DIR}")
++juce_add_modules(${AAP_JUCE_DIR}/aap-modules/aap_audio_processors)
++
++if (ANDROID)
++    find_package(androidaudioplugin CONFIG REQUIRED)
++    find_library(log log)
++    find_library(android android)
++    find_library(glesv2 GLESv2)
++    find_library(egl EGL)
++
++    target_include_directories(vmpc2000xl PRIVATE
++        "${ANDROID_NDK}/sources/android/cpufeatures"
++        "${OBOE_DIR}/include")
++
++    target_compile_definitions(vmpc2000xl PRIVATE
++        JUCE_DONT_AUTO_OPEN_MIDI_DEVICES_ON_MOBILE=1)
++endif()
++
++target_link_libraries(vmpc2000xl PRIVATE aap_audio_processors)
++
++if (ANDROID AND TARGET vmpc2000xl_Standalone)
++    target_link_libraries(vmpc2000xl_Standalone PRIVATE
++        ${log}
++        ${android}
++        androidaudioplugin::androidaudioplugin)
++    target_sources(vmpc2000xl_Standalone PRIVATE
++        "${CMAKE_CURRENT_SOURCE_DIR}/src/main/AAPFactoryStandalone.cpp")
++endif()
+diff --git a/src/main/AAPFactoryStandalone.cpp b/src/main/AAPFactoryStandalone.cpp
+new file mode 100644
+index 0000000..32aeca5
+--- /dev/null
++++ b/src/main/AAPFactoryStandalone.cpp
+@@ -0,0 +1,16 @@
++#include <jni.h>
++
++namespace aap
++{
++JavaVM* get_android_jvm();
++}
++
++extern "C" jint JNI_GetCreatedJavaVMs(JavaVM** vmBuf, jsize nVMs, jsize* nVMsFound)
++{
++    auto* vm = aap::get_android_jvm();
++    if (nVMsFound != nullptr)
++        *nVMsFound = vm == nullptr ? 0 : 1;
++    if (vm != nullptr && vmBuf != nullptr && nVMs > 0)
++        vmBuf[0] = vm;
++    return vm == nullptr ? JNI_ERR : JNI_OK;
++}
+diff --git a/src/main/InitialWindowDimensions.hpp b/src/main/InitialWindowDimensions.hpp
+index e0fabdd..0dd0acf 100644
+--- a/src/main/InitialWindowDimensions.hpp
++++ b/src/main/InitialWindowDimensions.hpp
+@@ -7,7 +7,7 @@
+ 
+ #if defined(_WIN32) || defined(_WIN64)
+ #include <windows.h>
+-#elif defined(__linux__)
++#elif defined(__linux__) && !defined(__ANDROID__)
+ #include <X11/Xlib.h>
+ #include <X11/extensions/Xrandr.h>
+ #endif
+@@ -71,7 +71,7 @@ namespace vmpc_juce
+                                  scaleFactor);
+             return static_cast<int>((totalHeight - frameHeight - 22) /
+                                     scaleFactor);
+-#elif defined(__linux__)
++#elif defined(__linux__) && !defined(__ANDROID__)
+             Display *display = XOpenDisplay(nullptr);
+ 
+             if (!display)
+diff --git a/src/main/gui/focus/FocusHelper.hpp b/src/main/gui/focus/FocusHelper.hpp
+index 0c3c1e3..86b4f8e 100644
+--- a/src/main/gui/focus/FocusHelper.hpp
++++ b/src/main/gui/focus/FocusHelper.hpp
+@@ -16,8 +16,10 @@ extern "C" bool isEditorKeyWindow(void *componentPeerNativeHandle);
+ #endif
+ #elif _WIN32
+ extern "C" bool isEditorKeyWindow(void *componentPeerNativeHandle);
+-#elif __linux__
++#elif __linux__ && !__ANDROID__
+ extern "C" bool isEditorKeyWindow(void *componentPeerNativeHandle);
++#elif __ANDROID__
++inline bool isEditorKeyWindow(void *) { return true; }
+ #endif
+ 
+ #include "Logger.hpp"
+diff --git a/src/main/gui/focus/FocusHelper_linux.cpp b/src/main/gui/focus/FocusHelper_linux.cpp
+index ea9c751..50a52e2 100644
+--- a/src/main/gui/focus/FocusHelper_linux.cpp
++++ b/src/main/gui/focus/FocusHelper_linux.cpp
+@@ -1,4 +1,4 @@
+-#ifdef __linux__
++#if defined(__linux__) && !defined(__ANDROID__)
+ #include <X11/Xlib.h>
+ #include <X11/Xatom.h>
+ #include <unistd.h>
+diff --git a/src/main/gui/vector/View.cpp b/src/main/gui/vector/View.cpp
+index c77e597..5333d32 100644
+--- a/src/main/gui/vector/View.cpp
++++ b/src/main/gui/vector/View.cpp
+@@ -131,7 +131,8 @@ View::View(mpc::Mpc &mpcToUse,
+         wrapperType ==
+         juce::AudioProcessor::WrapperType::wrapperType_AudioUnitv3;
+ 
+-    keyboard = KeyboardFactory::instance(shouldSynthesizeKeyRepeatsForSomeKeys);
++    keyboard = KeyboardFactory::instance(
++        this, shouldSynthesizeKeyRepeatsForSomeKeys);
+ 
+     focusHelper = new focus::FocusHelper(
+         [clientEventController = mpc.clientEventController,
