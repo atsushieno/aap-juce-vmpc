@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b750487..717f2cd 100644
+index b750487..258ac5a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -44,7 +44,7 @@ if(NOT DEFINED JUCE_COPY_PLUGIN_AFTER_BUILD)
@@ -21,7 +21,18 @@ index b750487..717f2cd 100644
  
  set(VMPC_JUCE_REPO "https://github.com/izzyreal/JUCE.git")
  set(VMPC_JUCE_REF "7.0.9-vmpc")
-@@ -105,6 +108,64 @@ set(BUILD_EXAMPLES OFF)
+@@ -88,10 +91,6 @@ if(NOT DEFINED FETCHCONTENT_CACHE_ROOT OR "${FETCHCONTENT_CACHE_ROOT}" STREQUAL
+   endif()
+ endif()
+ 
+-fetchcontent_declare_cached_git(JUCE "JUCE" "${CMAKE_SOURCE_DIR}/editables/JUCE" "${VMPC_JUCE_REPO}" "${VMPC_JUCE_REF}"
+-  GIT_SHALLOW    ON
+-)
+-
+ fetchcontent_declare_cached_git(melatonin_blur "melatonin_blur" "${CMAKE_SOURCE_DIR}/deps/melatonin_blur" "${VMPC_MELATONIN_BLUR_REPO}" "${VMPC_MELATONIN_BLUR_REF}")
+ 
+ fetchcontent_declare_cached_git(juce-raw-keyboard-input-module "juce-raw-keyboard-input-module" "${CMAKE_SOURCE_DIR}/editables/juce-raw-keyboard-input-module" "${VMPC_RAW_KBD_REPO}" "${VMPC_RAW_KBD_REF}")
+@@ -105,6 +104,64 @@ set(BUILD_EXAMPLES OFF)
  set(BUILD_TESTS OFF)
  set(INSTALL_PROJECT OFF)
  
@@ -86,7 +97,7 @@ index b750487..717f2cd 100644
  if(APPLE)
  if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
  fetchcontent_declare_cached_git(miniz "miniz" "${CMAKE_SOURCE_DIR}/deps/miniz" "${VMPC_MINIZ_REPO}" "${VMPC_MINIZ_REF}"
-@@ -124,6 +185,9 @@ endif()
+@@ -124,9 +181,23 @@ endif()
  
  message(STATUS "Resolving mpc...")
  FetchContent_MakeAvailable(mpc)
@@ -95,8 +106,23 @@ index b750487..717f2cd 100644
 +endif()
  
  message(STATUS "Resolving JUCE...")
- FetchContent_MakeAvailable(JUCE)
-@@ -162,6 +226,12 @@ else()
+-FetchContent_MakeAvailable(JUCE)
++include(${AAP_JUCE_DIR}/cmake/CPM.cmake)
++CPMAddPackage(
++  NAME             JUCE
++  GIT_REPOSITORY   "${VMPC_JUCE_REPO}"
++  GIT_TAG          "${VMPC_JUCE_REF}"
++  CUSTOM_CACHE_KEY aap-vmpc-7.0.9-vmpc
++  PATCH_COMMAND    git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/7.0.6/support-plugin-ui.patch
++  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/7.0.6/disable-detach-current-thread.patch
++  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/7.0.11/juce-component-peer-view-touch.patch
++  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/8.0.12/standalone-aap-factory-weak-fallback.patch
++  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/JUCE-support-Android-CMake.patch
++)
+ 
+ message(STATUS "Resolving juce-raw-keyboard-input-module...")
+ FetchContent_MakeAvailable(juce-raw-keyboard-input-module)
+@@ -162,6 +233,12 @@ else()
          LV2URI "http://www.izmar.nl/VMPC2000XL")
  endif()
  
@@ -109,7 +135,7 @@ index b750487..717f2cd 100644
  # Single call to juce_add_plugin with conditional settings
  juce_add_plugin(vmpc2000xl
      BUNDLE_ID nl.izmar.vmpc2000xl
-@@ -254,7 +324,7 @@ target_compile_definitions(vmpc2000xl
+@@ -254,7 +331,7 @@ target_compile_definitions(vmpc2000xl
      JUCE_DISPLAY_SPLASH_SCREEN=0
      JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1)
  
@@ -118,7 +144,7 @@ index b750487..717f2cd 100644
      include(FindPkgConfig)
      pkg_search_module(udisks2 REQUIRED udisks2)
      target_link_libraries(vmpc2000xl PRIVATE ${udisks2_LIBRARIES} X11)
-@@ -395,3 +465,41 @@ set(CPACK_SOURCE_IGNORE_FILES
+@@ -395,3 +472,41 @@ set(CPACK_SOURCE_IGNORE_FILES
      /\\\\.DS_Store
  )
  include(CPack)
