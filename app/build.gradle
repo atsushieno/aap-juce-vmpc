@@ -3,7 +3,7 @@ plugins {
 }
 
 def cpmSourceCacheDir = System.getenv("HOME") + "/.cache/CPM/vmpc"
-def juceSourceDir = cpmSourceCacheDir + "/juce/aap-vmpc-7.0.9-vmpc"
+def juceSourceDir = cpmSourceCacheDir + "/juce/aap-vmpc-7.0.9-vmpc-lifecycle"
 
 android {
     namespace = "org.androidaudioplugin.ports.juce.vmpc"

@@ -99,7 +99,7 @@ index b750487..06b1bce 100644
  if(APPLE)
  if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
  fetchcontent_declare_cached_git(miniz "miniz" "${CMAKE_SOURCE_DIR}/deps/miniz" "${VMPC_MINIZ_REPO}" "${VMPC_MINIZ_REF}"
-@@ -123,10 +182,24 @@ if(TARGET nlohmann_json::nlohmann_json AND NOT TARGET nlohmann_json)
+@@ -123,10 +182,25 @@ if(TARGET nlohmann_json::nlohmann_json AND NOT TARGET nlohmann_json)
  endif()
  
  message(STATUS "Resolving mpc...")
@@ -116,10 +116,11 @@ index b750487..06b1bce 100644
 +  NAME             JUCE
 +  GIT_REPOSITORY   "${VMPC_JUCE_REPO}"
 +  GIT_TAG          "${VMPC_JUCE_REF}"
-+  CUSTOM_CACHE_KEY aap-vmpc-7.0.9-vmpc
++  CUSTOM_CACHE_KEY aap-vmpc-7.0.9-vmpc-lifecycle
 +  PATCH_COMMAND    git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/7.0.6/support-plugin-ui.patch
 +  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/7.0.6/disable-detach-current-thread.patch
 +  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/7.0.11/juce-component-peer-view-touch.patch
++  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/7.0.11/component-peer-view-unregister-lifecycle-callbacks.patch
 +  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/juce-patches/8.0.12/standalone-aap-factory-weak-fallback.patch
 +  COMMAND          git apply --ignore-space-change ${AAP_JUCE_DIR}/JUCE-support-Android-CMake.patch
 +)
