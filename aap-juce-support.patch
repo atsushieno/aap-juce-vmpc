@@ -41,7 +41,8 @@ index b750487..c652624 100644
 -set(VMPC_RAW_KBD_REPO "https://github.com/izzyreal/juce-raw-keyboard-input-module.git")
 -set(VMPC_RAW_KBD_REF "external-focus-provider")
  set(VMPC_MPC_REPO "https://github.com/izzyreal/mpc.git")
- set(VMPC_MPC_REF "master")
+-set(VMPC_MPC_REF "master")
++set(VMPC_MPC_REF "6ca07ba322e2eab00b99a0000747ec524570d70d")
  set(VMPC_MINIZ_REPO "https://github.com/richgel999/miniz")
 @@ -88,13 +96,8 @@ if(NOT DEFINED FETCHCONTENT_CACHE_ROOT OR "${FETCHCONTENT_CACHE_ROOT}" STREQUAL
    endif()
